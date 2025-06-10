@@ -1,123 +1,186 @@
 package com.example.ewaste.data.repository
 
+import android.content.Context
+import android.content.SharedPreferences
+import com.example.ewaste.data.remote.ApiService
 import com.example.ewaste.data.remote.model.*
-import kotlinx.coroutines.delay
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import javax.inject.Singleton
 
-class AuthRepository @Inject constructor(){
+@Singleton
+class AuthRepository @Inject constructor(
+    private val apiService: ApiService,
+    @ApplicationContext private val context: Context
+) {
+    private val prefs: SharedPreferences = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
 
-    // Data dummy pengguna
-    private val dummyUsers = listOf(
-        User("admin@example.com", "password123", "adminUser"),
-        User("user@example.com", "password123", "testUser")
-    )
+    companion object {
+        private const val TOKEN_KEY = "auth_token"
+        private const val USER_EMAIL_KEY = "user_email"
+        private const val USER_NAME_KEY = "user_name"
+        private const val USER_ID_KEY = "user_id"
+    }
 
-    data class User(val email: String, val password: String, val username: String)
+    // Save authentication data
+    private fun saveAuthData(token: String, userId: Int, email: String, username: String) {
+        prefs.edit()
+            .putString(TOKEN_KEY, token)
+            .putInt(USER_ID_KEY, userId)
+            .putString(USER_EMAIL_KEY, email)
+            .putString(USER_NAME_KEY, username)
+            .apply()
+    }
 
-    // Fungsi login menggunakan data dummy
+    // Get token
+    fun getToken(): String? = prefs.getString(TOKEN_KEY, null)
+
+    // Get user data
+    fun getUserEmail(): String? = prefs.getString(USER_EMAIL_KEY, null)
+    fun getUserName(): String? = prefs.getString(USER_NAME_KEY, null)
+    fun getUserId(): Int = prefs.getInt(USER_ID_KEY, -1)
+
+    // Check if user is logged in
+    fun isLoggedIn(): Boolean = getToken() != null
+
+    // Clear authentication data
+    fun clearAuthData() {
+        prefs.edit().clear().apply()
+    }
+
+    // Login
     suspend fun login(request: LoginRequest): Result<String> {
-        delay(1000)  // Simulasi delay jaringan
-        val user = dummyUsers.find { it.email == request.email && it.password == request.password }
-        return if (user != null) {
-            Result.success("Login successful")  // Login berhasil
-        } else {
-            Result.failure(Exception("Invalid email or password"))  // Login gagal
+        return try {
+            val response = apiService.login(request)
+            if (response.isSuccessful && response.body()?.success == true) {
+                val userResponse = response.body()!!
+                val userData = userResponse.data
+                val token = userData.token ?: ""
+
+                saveAuthData(token, userData.id, userData.email, userData.username)
+                Result.success("Login successful")
+            } else {
+                val errorMessage = response.body()?.message ?: "Login failed"
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Network error: ${e.message}"))
         }
     }
 
-    // Fungsi register menggunakan data dummy
+    // Register
     suspend fun register(request: RegisterRequest): Result<String> {
-        delay(1000)  // Simulasi delay jaringan
-        val newUser = User(request.email, request.password, request.username)
-        // Simulasi data berhasil disimpan
-        return Result.success("User registered successfully. Check your email for OTP.")
+        return try {
+            val response = apiService.register(request)
+            if (response.isSuccessful && response.body()?.success == true) {
+                Result.success(response.body()?.message ?: "Registration successful")
+            } else {
+                val errorMessage = response.body()?.message ?: "Registration failed"
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Network error: ${e.message}"))
+        }
     }
 
+    // Verify OTP
     suspend fun verifyOtp(request: OtpRequest): Result<String> {
-        delay(1000)  // Simulasi delay jaringan
-        // Simulasi pengecekan OTP
-        val isValidOtp = request.code == "123456"  // Cek kode OTP dari dummy
-
-        return if (isValidOtp) {
-            // Jika OTP valid, kembalikan sukses dengan pesan
-            Result.success("OTP berhasil diverifikasi")
-        } else {
-            // Jika OTP salah, kembalikan failure dengan pesan error
-            Result.failure(Exception("OTP salah"))
+        return try {
+            val response = apiService.verifyOtp(request)
+            if (response.isSuccessful && response.body()?.success == true) {
+                Result.success(response.body()?.message ?: "OTP verified successfully")
+            } else {
+                val errorMessage = response.body()?.message ?: "Invalid OTP"
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Network error: ${e.message}"))
         }
     }
 
-
-
-    // Fungsi forgot password dengan data dummy
+    // Forgot password
     suspend fun forgotPassword(email: String): Result<String> {
-        delay(1000)  // Simulasi delay jaringan
-        val user = dummyUsers.find { it.email == email }
-        return if (user != null) {
-            Result.success("OTP sent successfully")  // OTP berhasil dikirim
-        } else {
-            Result.failure(Exception("Email not found"))  // Email tidak ditemukan
+        return try {
+            val response = apiService.forgotPassword(ForgotPasswordRequest(email))
+            if (response.isSuccessful && response.body()?.success == true) {
+                Result.success(response.body()?.message ?: "OTP sent successfully")
+            } else {
+                val errorMessage = response.body()?.message ?: "Email not found"
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Network error: ${e.message}"))
         }
     }
 
-    // Fungsi reset password dengan data dummy (diubah untuk hanya menerima newPassword)
-    suspend fun resetPassword(newPassword: String): Result<String> {
-        delay(1000)  // Simulasi delay jaringan
-        // Simulasi reset password berhasil
-        return Result.success("Password reset successful")
+    // Reset password
+    suspend fun resetPassword(email: String, otpCode: String, newPassword: String): Result<String> {
+        return try {
+            val request = ResetPasswordRequest(email, otpCode, newPassword)
+            val response = apiService.resetPassword(request)
+            if (response.isSuccessful && response.body()?.success == true) {
+                Result.success(response.body()?.message ?: "Password reset successful")
+            } else {
+                val errorMessage = response.body()?.message ?: "Password reset failed"
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Network error: ${e.message}"))
+        }
     }
 
-
-    // Fungsi update profile dengan data dummy
+    // Update profile
     suspend fun updateProfile(request: ProfileRequest): Result<String> {
-        delay(1000)  // Simulasi delay jaringan
-        // Simulasi profile berhasil diperbarui
-        return Result.success("Profile updated successfully")
+        return try {
+            val token = getToken()
+            if (token == null) {
+                return Result.failure(Exception("No authentication token"))
+            }
+
+            val response = apiService.updateProfile("Bearer $token", request)
+            if (response.isSuccessful && response.body()?.success == true) {
+                Result.success(response.body()?.message ?: "Profile updated successfully")
+            } else {
+                val errorMessage = response.body()?.message ?: "Profile update failed"
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Network error: ${e.message}"))
+        }
     }
 
-    // Fungsi update password dengan data dummy
+    // Update password
     suspend fun updatePassword(request: UpdatePasswordRequest): Result<String> {
-        delay(1000)  // Simulasi delay jaringan
-        // Simulasi password berhasil diperbarui
-        return Result.success("Password updated successfully")
+        return try {
+            val token = getToken()
+            if (token == null) {
+                return Result.failure(Exception("No authentication token"))
+            }
+
+            val response = apiService.updatePassword("Bearer $token", request)
+            if (response.isSuccessful && response.body()?.success == true) {
+                Result.success(response.body()?.message ?: "Password updated successfully")
+            } else {
+                val errorMessage = response.body()?.message ?: "Password update failed"
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Network error: ${e.message}"))
+        }
+    }
+
+    // Logout
+    suspend fun logout(): Result<String> {
+        return try {
+            val token = getToken()
+            if (token != null) {
+                apiService.logout("Bearer $token")
+            }
+            clearAuthData()
+            Result.success("Logged out successfully")
+        } catch (e: Exception) {
+            clearAuthData() // Clear local data even if API call fails
+            Result.success("Logged out successfully")
+        }
     }
 }
-
-
-
-//import com.example.ewaste.data.remote.ApiService
-//import com.example.ewaste.data.remote.model.*
-//import javax.inject.Inject
-//
-//class AuthRepository @Inject constructor(
-//    private val api: ApiService
-//) {
-//    suspend fun login(request: LoginRequest) = runCatching {
-//        api.login(request)
-//    }
-//
-//    suspend fun register(request: RegisterRequest) = runCatching {
-//        api.register(request)
-//    }
-//
-//    suspend fun verifyOtp(request: OtpRequest) = runCatching {
-//        api.verifyOtp(request)
-//    }
-//
-//    suspend fun forgotPassword(email: String) = runCatching {
-//        api.forgotPassword(ForgotPasswordRequest(email))
-//    }
-//
-//    suspend fun resetPassword(email: String, otp: String, newPassword: String) = runCatching {
-//        api.resetPassword(ResetPasswordRequest(email, otp, newPassword))
-//    }
-//
-//    suspend fun updateProfile(request: ProfileRequest) = runCatching {
-//        api.updateProfile(request)
-//    }
-//
-//    suspend fun updatePassword(request: UpdatePasswordRequest) = runCatching {
-//        api.updatePassword(request)
-//    }
-//
-//}

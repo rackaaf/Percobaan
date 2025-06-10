@@ -2,16 +2,14 @@ package com.example.ewaste.data.remote
 
 import com.example.ewaste.data.remote.model.*
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.POST
+import retrofit2.http.*
 
 interface ApiService {
-    @POST("login")
-    suspend fun login(@Body request: LoginRequest): Response<UserResponse>
-
     @POST("register")
     suspend fun register(@Body request: RegisterRequest): Response<BaseResponse>
+
+    @POST("login")
+    suspend fun login(@Body request: LoginRequest): Response<UserResponse>
 
     @POST("verify-otp")
     suspend fun verifyOtp(@Body request: OtpRequest): Response<BaseResponse>
@@ -23,10 +21,16 @@ interface ApiService {
     suspend fun resetPassword(@Body request: ResetPasswordRequest): Response<BaseResponse>
 
     @POST("update-profile")
-    suspend fun updateProfile(@Body request: ProfileRequest): Response<BaseResponse>
+    suspend fun updateProfile(
+        @Header("Authorization") token: String,
+        @Body request: ProfileRequest
+    ): Response<BaseResponse>
 
     @POST("update-password")
-    suspend fun updatePassword(@Body request: UpdatePasswordRequest): Response<BaseResponse>
+    suspend fun updatePassword(
+        @Header("Authorization") token: String,
+        @Body request: UpdatePasswordRequest
+    ): Response<BaseResponse>
 
     @GET("kategori")
     suspend fun getKategori(): Response<List<KategoriResponse>>
@@ -34,4 +38,9 @@ interface ApiService {
     @GET("jenis")
     suspend fun getJenis(): Response<List<JenisResponse>>
 
+    @GET("jenis/category/{categoryId}")
+    suspend fun getJenisByCategory(@Path("categoryId") categoryId: Int): Response<List<JenisResponse>>
+
+    @POST("logout")
+    suspend fun logout(@Header("Authorization") token: String): Response<BaseResponse>
 }

@@ -10,7 +10,6 @@ plugins {
 
 buildscript {
     dependencies {
-        // ...existing code...
         classpath("io.github.cdimascio:dotenv-kotlin:6.4.1")
     }
 }

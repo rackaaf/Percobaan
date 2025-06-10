@@ -10,4 +10,13 @@ interface KategoriDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(data: List<KategoriEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(kategori: KategoriEntity)
+
+    @Delete
+    suspend fun delete(kategori: KategoriEntity)
+
+    @Query("DELETE FROM kategori")
+    suspend fun deleteAll()
 }

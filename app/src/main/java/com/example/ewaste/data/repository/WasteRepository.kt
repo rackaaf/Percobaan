@@ -8,43 +8,75 @@ import com.example.ewaste.data.remote.ApiService
 import javax.inject.Inject
 
 class WasteRepository @Inject constructor(
-    private val api: ApiService,      // Untuk mengambil data dari API
-    private val kategoriDao: KategoriDao,  // DAO untuk kategori di Room
-    private val jenisDao: JenisDao     // DAO untuk jenis di Room
+    private val api: ApiService,
+    private val kategoriDao: KategoriDao,
+    private val jenisDao: JenisDao
 ) {
-    // Fungsi untuk mengambil kategori dari API dan menyimpannya di Room jika baru
+    // Fetch kategori dari API dan cache ke Room
     suspend fun fetchKategori(): List<KategoriEntity> {
-        val response = api.getKategori()  // Mengambil data kategori dari API
+        return try {
+            val response = api.getKategori()
+            if (response.isSuccessful) {
+                val apiData = response.body()?.map {
+                    KategoriEntity(it.id, it.nama)
+                } ?: emptyList()
 
-        if (response.isSuccessful) {
-            val list = response.body()?.map {
-                // Memetakan response API ke dalam entity KategoriEntity
-                KategoriEntity(it.id, it.nama)
-            } ?: emptyList()
-
-            // Menyimpan kategori yang baru didapatkan ke dalam Room
-            kategoriDao.insertAll(list)
+                // Save to local database
+                kategoriDao.deleteAll()
+                kategoriDao.insertAll(apiData)
+                return apiData
+            } else {
+                // Fallback to local data if API fails
+                kategoriDao.getAll()
+            }
+        } catch (e: Exception) {
+            // Fallback to local data if network error
+            kategoriDao.getAll()
         }
-
-        // Mengambil data kategori dari Room, jika sudah ada
-        return kategoriDao.getAll()  // Mengambil semua kategori yang ada di Room
     }
 
-    // Fungsi untuk mengambil jenis sampah berdasarkan kategoriId dari API dan menyimpannya di Room jika baru
+    // Fetch jenis dari API dan cache ke Room
     suspend fun fetchJenis(kategoriId: Int): List<JenisEntity> {
-        val response = api.getJenis()  // Mengambil data jenis dari API
+        return try {
+            val response = api.getJenisByCategory(kategoriId)
+            if (response.isSuccessful) {
+                val apiData = response.body()?.map {
+                    JenisEntity(it.id, it.namaJenis, it.kategoriId)
+                } ?: emptyList()
 
-        if (response.isSuccessful) {
-            val list = response.body()?.map {
-                // Memetakan response API ke dalam entity JenisEntity
-                JenisEntity(it.id, it.namaJenis, it.kategoriId)
-            } ?: emptyList()
-
-            // Menyimpan jenis yang baru didapatkan ke dalam Room
-            jenisDao.insertAll(list)
+                // Save to local database (replace existing for this category)
+                jenisDao.insertAll(apiData)
+                return apiData
+            } else {
+                // Fallback to local data if API fails
+                jenisDao.getByKategori(kategoriId)
+            }
+        } catch (e: Exception) {
+            // Fallback to local data if network error
+            jenisDao.getByKategori(kategoriId)
         }
+    }
 
-        // Mengambil data jenis berdasarkan kategoriId dari Room
-        return jenisDao.getByKategori(kategoriId)  // Mengambil jenis berdasarkan kategoriId dari Room
+    // Get all jenis dari API
+    suspend fun fetchAllJenis(): List<JenisEntity> {
+        return try {
+            val response = api.getJenis()
+            if (response.isSuccessful) {
+                val apiData = response.body()?.map {
+                    JenisEntity(it.id, it.namaJenis, it.kategoriId)
+                } ?: emptyList()
+
+                // Save to local database
+                jenisDao.deleteAll()
+                jenisDao.insertAll(apiData)
+                return apiData
+            } else {
+                // Fallback to local data if API fails
+                jenisDao.getAll()
+            }
+        } catch (e: Exception) {
+            // Fallback to local data if network error
+            jenisDao.getAll()
+        }
     }
 }

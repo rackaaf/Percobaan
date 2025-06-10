@@ -9,10 +9,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val repository: AuthRepository
+    val repository: AuthRepository
 ) : ViewModel() {
 
     var isLoading by mutableStateOf(false)
@@ -20,23 +19,29 @@ class AuthViewModel @Inject constructor(
     var registerMessage by mutableStateOf<String?>(null)
     var errorMessage by mutableStateOf<String?>(null)
 
-    // Tambahan state untuk navigasi
+    // State untuk navigasi
     var otpSent by mutableStateOf(false)
     var otpVerified by mutableStateOf(false)
-
     var otpVerifiedForForgot by mutableStateOf(false)
     var passwordResetSuccess by mutableStateOf(false)
+
+    // State untuk forgot password flow
+    private var forgotPasswordEmail by mutableStateOf("")
 
     // Login
     fun login(email: String, password: String) {
         viewModelScope.launch {
             isLoading = true
+            errorMessage = null
             val result = repository.login(LoginRequest(email, password))
             isLoading = false
+
             if (result.isSuccess) {
                 loginSuccess = true
+                errorMessage = null
             } else {
                 errorMessage = result.exceptionOrNull()?.message
+                loginSuccess = false
             }
         }
     }
@@ -49,31 +54,16 @@ class AuthViewModel @Inject constructor(
             isLoading = false
 
             if (result.isSuccess) {
-                registerMessage = result.getOrNull() ?: "Register berhasil. Periksa email untuk OTP."
+                registerMessage = result.getOrNull()
                 otpSent = true
             } else {
-                registerMessage = result.exceptionOrNull()?.message ?: "Gagal register"
+                registerMessage = result.exceptionOrNull()?.message
                 otpSent = false
             }
         }
     }
 
-//    fun verifyOtp(email: String, code: String) {
-//        viewModelScope.launch {
-//            isLoading = true
-//            val result = repository.verifyOtp(OtpRequest(email, code))
-//            isLoading = false
-//
-//            if (result.isSuccess) {
-//                registerMessage = result.getOrNull() ?: "OTP berhasil diverifikasi"
-//                otpVerified = true
-//            } else {
-//                registerMessage = result.exceptionOrNull()?.message ?: "OTP salah"
-//                otpVerified = false
-//            }
-//        }
-//    }
-
+    // Verify OTP
     fun verifyOtp(code: String, purpose: String = "register") {
         viewModelScope.launch {
             isLoading = true
@@ -81,62 +71,52 @@ class AuthViewModel @Inject constructor(
             isLoading = false
 
             if (result.isSuccess) {
-                registerMessage = result.getOrNull() ?: "OTP berhasil diverifikasi"
-
+                registerMessage = result.getOrNull()
                 when (purpose) {
                     "register" -> otpVerified = true
                     "forgot" -> otpVerifiedForForgot = true
                 }
             } else {
-                registerMessage = result.exceptionOrNull()?.message ?: "OTP salah"
+                registerMessage = result.exceptionOrNull()?.message
             }
         }
     }
 
-
-
+    // Forgot password
     fun forgotPassword(email: String) {
         viewModelScope.launch {
             isLoading = true
+            forgotPasswordEmail = email // Save email for later use
             val result = repository.forgotPassword(email)
             isLoading = false
-            // Pastikan result.getOrNull() mengembalikan objek yang memiliki message
-            registerMessage = result.getOrNull() ?: "Cek email untuk OTP reset."  // Fallback message jika gagal
+
+            registerMessage = if (result.isSuccess) {
+                result.getOrNull()
+            } else {
+                result.exceptionOrNull()?.message
+            }
         }
     }
 
-    // Reset password
-//    fun resetPassword(email: String, otp: String, newPassword: String) {
-//        viewModelScope.launch {
-//            isLoading = true
-//            val result = repository.resetPassword(email, otp, newPassword)
-//            isLoading = false
-//            // Pastikan result.getOrNull() mengembalikan objek yang memiliki message
-//            registerMessage = result.getOrNull() ?: "Password berhasil direset."  // Fallback message jika gagal
-//        }
-//    }
-
-    // Fungsi reset password hanya dengan password baru
-    fun resetPassword(newPassword: String) {
+    // Reset password (updated to include email and OTP)
+    fun resetPassword(otpCode: String, newPassword: String) {
         viewModelScope.launch {
             isLoading = true
-            val result = repository.resetPassword(newPassword) // Menggunakan hanya password baru
+            val result = repository.resetPassword(forgotPasswordEmail, otpCode, newPassword)
             isLoading = false
 
             passwordResetSuccess = result.isSuccess
-            registerMessage = result.getOrNull() ?: result.exceptionOrNull()?.message ?: "Terjadi kesalahan"
+            registerMessage = result.getOrNull() ?: result.exceptionOrNull()?.message
         }
     }
 
-
-
     // Update profile
-    fun updateProfile(name: String, address: String, birthDate: String, photoUrl: String?) {
+    fun updateProfile(name: String, address: String, birthDate: String, photoUrl: String? = null) {
         viewModelScope.launch {
             isLoading = true
             val result = repository.updateProfile(ProfileRequest(name, address, birthDate, photoUrl))
             isLoading = false
-            registerMessage = result.getOrNull() ?: "Profil gagal diperbarui."
+            registerMessage = result.getOrNull() ?: result.exceptionOrNull()?.message
         }
     }
 
@@ -146,104 +126,33 @@ class AuthViewModel @Inject constructor(
             isLoading = true
             val result = repository.updatePassword(UpdatePasswordRequest(oldPass, newPass, confirmPass))
             isLoading = false
-            registerMessage = result.getOrNull() ?: "Password gagal diperbarui."
+            registerMessage = result.getOrNull() ?: result.exceptionOrNull()?.message
         }
     }
+
+    // Logout
+    fun logout() {
+        viewModelScope.launch {
+            repository.logout()
+            // Reset all states
+            loginSuccess = false
+            otpSent = false
+            otpVerified = false
+            otpVerifiedForForgot = false
+            passwordResetSuccess = false
+            registerMessage = null
+            errorMessage = null
+        }
+    }
+
+    // Reset states
+    fun resetStates() {
+        loginSuccess = false
+        otpSent = false
+        otpVerified = false
+        otpVerifiedForForgot = false
+        passwordResetSuccess = false
+        registerMessage = null
+        errorMessage = null
+    }
 }
-
-
-
-//package com.example.ewaste.viewmodel
-//
-//import androidx.compose.runtime.*
-//import androidx.lifecycle.ViewModel
-//import androidx.lifecycle.viewModelScope
-//import com.example.ewaste.data.remote.model.*
-//import com.example.ewaste.data.repository.AuthRepository
-//import dagger.hilt.android.lifecycle.HiltViewModel
-//import kotlinx.coroutines.launch
-//import javax.inject.Inject
-//
-//@HiltViewModel
-//class AuthViewModel @Inject constructor(
-//    private val repository: AuthRepository
-//) : ViewModel() {
-//
-//    var isLoading by mutableStateOf(false)
-//    var loginSuccess by mutableStateOf(false)
-//    var registerMessage by mutableStateOf<String?>(null)
-//    var errorMessage by mutableStateOf<String?>(null)
-//
-//    fun login(email: String, password: String) {
-//        viewModelScope.launch {
-//            isLoading = true
-//            val result = repository.login(LoginRequest(email, password))
-//            isLoading = false
-//            loginSuccess = result.isSuccess
-//            errorMessage = result.exceptionOrNull()?.message
-//        }
-//    }
-//
-//    fun register(username: String, email: String, phone: String, password: String) {
-//        viewModelScope.launch {
-//            isLoading = true
-//            val result = repository.register(RegisterRequest(username, email, phone, password))
-//            isLoading = false
-//            registerMessage = if (result.isSuccess) {
-//                result.getOrNull()?.message() ?: "Register berhasil. Periksa email untuk OTP."
-//            } else {
-//                result.exceptionOrNull()?.message ?: "Gagal register"
-//            }
-//        }
-//    }
-//
-//    fun verifyOtp(email: String, code: String) {
-//        viewModelScope.launch {
-//            isLoading = true
-//            val result = repository.verifyOtp(OtpRequest(email, code))
-//            isLoading = false
-//            registerMessage = if (result.isSuccess) {
-//                result.getOrNull()?.message() ?: "OTP berhasil diverifikasi"
-//            } else {
-//                result.exceptionOrNull()?.message ?: "OTP salah"
-//            }
-//        }
-//    }
-//
-//    fun forgotPassword(email: String) {
-//        viewModelScope.launch {
-//            isLoading = true
-//            val result = repository.forgotPassword(email)
-//            isLoading = false
-//            registerMessage = result.getOrNull()?.message() ?: "Cek email untuk OTP reset."
-//        }
-//    }
-//
-//    fun resetPassword(email: String, otp: String, newPassword: String) {
-//        viewModelScope.launch {
-//            isLoading = true
-//            val result = repository.resetPassword(email, otp, newPassword)
-//            isLoading = false
-//            registerMessage = result.getOrNull()?.message() ?: "Password berhasil direset."
-//        }
-//    }
-//
-//    fun updateProfile(name: String, address: String, birthDate: String, photoUrl: String?) {
-//        viewModelScope.launch {
-//            isLoading = true
-//            val result = repository.updateProfile(ProfileRequest(name, address, birthDate, photoUrl))
-//            isLoading = false
-//            registerMessage = result.getOrNull()?.message() ?: "Profil diperbarui."
-//        }
-//    }
-//
-//    fun updatePassword(oldPass: String, newPass: String, confirmPass: String) {
-//        viewModelScope.launch {
-//            isLoading = true
-//            val result = repository.updatePassword(UpdatePasswordRequest(oldPass, newPass, confirmPass))
-//            isLoading = false
-//            registerMessage = result.getOrNull()?.message() ?: "Password berhasil diubah."
-//        }
-//    }
-//
-//}

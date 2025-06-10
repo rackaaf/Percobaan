@@ -1,7 +1,6 @@
 package com.example.ewaste.ui.screen
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -10,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -17,13 +17,13 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.ewaste.viewmodel.AuthViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
-
 
 @Composable
 fun RegisterScreen(
     navController: NavController,
-    viewModel: AuthViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    viewModel: AuthViewModel = hiltViewModel()
 ) {
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -46,7 +46,6 @@ fun RegisterScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Judul
         Text(
             "Register",
             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
@@ -86,15 +85,6 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Field input Password
-//        OutlinedTextField(
-//            value = password,
-//            onValueChange = { password = it },
-//            label = { Text("Password") },
-//            modifier = Modifier.fillMaxWidth(),
-//            visualTransformation = PasswordVisualTransformation() // Menyembunyikan password
-//        )
-
-        // Field input Password
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -110,12 +100,7 @@ fun RegisterScreen(
                     )
                 }
             },
-            keyboardOptions = KeyboardOptions.Default.copy(
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = { /* Handle login */ }
-            )
+            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done)
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -123,12 +108,17 @@ fun RegisterScreen(
         // Tombol Register
         Button(
             onClick = {
-                viewModel.otpSent = false // reset dulu
+                viewModel.resetStates()
                 viewModel.register(username, email, phone, password)
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !viewModel.isLoading
         ) {
-            Text("Daftar")
+            if (viewModel.isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+            } else {
+                Text("Daftar")
+            }
         }
 
         viewModel.registerMessage?.let {
@@ -149,62 +139,3 @@ fun RegisterScreen(
         }
     }
 }
-
-
-
-//package com.example.ewaste.ui.screen
-//
-//import androidx.compose.foundation.layout.*
-//import androidx.compose.material3.*
-//import androidx.compose.runtime.*
-//import androidx.compose.ui.Modifier
-//import androidx.compose.ui.unit.dp
-//import androidx.navigation.NavController
-//import com.example.ewaste.viewmodel.AuthViewModel
-//import kotlinx.coroutines.delay
-//
-//@Composable
-//fun RegisterScreen(
-//    navController: NavController,
-//    viewModel: AuthViewModel = androidx.hilt.navigation.compose.hiltViewModel()
-//) {
-//    var username by remember { mutableStateOf("") }
-//    var email by remember { mutableStateOf("") }
-//    var phone by remember { mutableStateOf("") }
-//    var password by remember { mutableStateOf("") }
-//
-//    // Navigasi ke halaman OTP
-//    LaunchedEffect(viewModel.otpSent) {
-//        if (viewModel.otpSent) {
-//            delay(2000)
-//            navController.navigate("otp/register")
-//        }
-//    }
-//
-//    Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
-//        Text("Daftar Akun", style = MaterialTheme.typography.headlineMedium)
-//        OutlinedTextField(value = username, onValueChange = { username = it }, label = { Text("Username") })
-//        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
-//        OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("No. Telepon") })
-//        OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") })
-//
-//        Spacer(modifier = Modifier.height(16.dp))
-//        Button(onClick = {
-//            viewModel.otpSent = false // reset dulu
-//            viewModel.register(username, email, phone, password)
-//        }) {
-//            Text("Register")
-//        }
-//
-//        viewModel.registerMessage?.let {
-//            Spacer(modifier = Modifier.height(8.dp))
-//            Text(it)
-//        }
-//
-//        Spacer(modifier = Modifier.height(16.dp))
-//        TextButton(onClick = { navController.popBackStack() }) {
-//            Text("Sudah punya akun? Login")
-//        }
-//    }
-//}
-

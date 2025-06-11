@@ -1,6 +1,8 @@
 package com.example.ewaste.data.remote
 
 import com.example.ewaste.data.remote.model.*
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -20,10 +22,15 @@ interface ApiService {
     @POST("reset-password")
     suspend fun resetPassword(@Body request: ResetPasswordRequest): Response<BaseResponse>
 
+    @Multipart
     @POST("update-profile")
     suspend fun updateProfile(
         @Header("Authorization") token: String,
-        @Body request: ProfileRequest
+        @Part("name") name: RequestBody?,
+        @Part("address") address: RequestBody?,
+        @Part("birthDate") birthDate: RequestBody?,
+        @Part("phoneNumber") phoneNumber: RequestBody?,
+        @Part photo: MultipartBody.Part?
     ): Response<BaseResponse>
 
     @POST("update-password")
@@ -31,6 +38,9 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: UpdatePasswordRequest
     ): Response<BaseResponse>
+
+    @GET("profile")
+    suspend fun getProfile(@Header("Authorization") token: String): Response<ProfileResponse>
 
     @GET("kategori")
     suspend fun getKategori(): Response<List<KategoriResponse>>

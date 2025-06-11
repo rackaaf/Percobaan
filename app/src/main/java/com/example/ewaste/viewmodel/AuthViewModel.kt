@@ -1,11 +1,17 @@
 package com.example.ewaste.viewmodel
 
-import androidx.compose.runtime.*
+import android.net.Uri
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ewaste.data.repository.AuthRepository
 import com.example.ewaste.data.remote.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -15,137 +21,33 @@ class AuthViewModel @Inject constructor(
 ) : ViewModel() {
 
     var isLoading by mutableStateOf(false)
+        private set
+
     var loginSuccess by mutableStateOf(false)
-    var registerMessage by mutableStateOf<String?>(null)
-    var errorMessage by mutableStateOf<String?>(null)
+        private set
 
-    // State untuk navigasi
     var otpSent by mutableStateOf(false)
+        private set
+
     var otpVerified by mutableStateOf(false)
+        private set
+
     var otpVerifiedForForgot by mutableStateOf(false)
+        private set
+
     var passwordResetSuccess by mutableStateOf(false)
+        private set
 
-    // State untuk forgot password flow
-    private var forgotPasswordEmail by mutableStateOf("")
+    var registerMessage by mutableStateOf<String?>(null)
+        private set
 
-    // Login
-    fun login(email: String, password: String) {
-        viewModelScope.launch {
-            isLoading = true
-            errorMessage = null
-            val result = repository.login(LoginRequest(email, password))
-            isLoading = false
+    var errorMessage by mutableStateOf<String?>(null)
+        private set
 
-            if (result.isSuccess) {
-                loginSuccess = true
-                errorMessage = null
-            } else {
-                errorMessage = result.exceptionOrNull()?.message
-                loginSuccess = false
-            }
-        }
-    }
+    // Profile data states
+    private val _userProfile = MutableStateFlow<UserData?>(null)
+    val userProfile: StateFlow<UserData?> = _userProfile.asStateFlow()
 
-    // Register
-    fun register(username: String, email: String, phone: String, password: String) {
-        viewModelScope.launch {
-            isLoading = true
-            val result = repository.register(RegisterRequest(username, email, phone, password))
-            isLoading = false
-
-            if (result.isSuccess) {
-                registerMessage = result.getOrNull()
-                otpSent = true
-            } else {
-                registerMessage = result.exceptionOrNull()?.message
-                otpSent = false
-            }
-        }
-    }
-
-    // Verify OTP
-    fun verifyOtp(code: String, purpose: String = "register") {
-        viewModelScope.launch {
-            isLoading = true
-            val result = repository.verifyOtp(OtpRequest(code))
-            isLoading = false
-
-            if (result.isSuccess) {
-                registerMessage = result.getOrNull()
-                when (purpose) {
-                    "register" -> otpVerified = true
-                    "forgot" -> otpVerifiedForForgot = true
-                }
-            } else {
-                registerMessage = result.exceptionOrNull()?.message
-            }
-        }
-    }
-
-    // Forgot password
-    fun forgotPassword(email: String) {
-        viewModelScope.launch {
-            isLoading = true
-            forgotPasswordEmail = email // Save email for later use
-            val result = repository.forgotPassword(email)
-            isLoading = false
-
-            registerMessage = if (result.isSuccess) {
-                result.getOrNull()
-            } else {
-                result.exceptionOrNull()?.message
-            }
-        }
-    }
-
-    // Reset password (updated to include email and OTP)
-    fun resetPassword(email: String, otpCode: String, newPassword: String) {
-        viewModelScope.launch {
-            isLoading = true
-            val result = repository.resetPassword(email, otpCode, newPassword)
-            isLoading = false
-
-            passwordResetSuccess = result.isSuccess
-            registerMessage = result.getOrNull() ?: result.exceptionOrNull()?.message
-        }
-    }
-
-    // Update profile
-    fun updateProfile(name: String, address: String, birthDate: String, photoUrl: String? = null) {
-        viewModelScope.launch {
-            isLoading = true
-            val result = repository.updateProfile(ProfileRequest(name, address, birthDate, photoUrl))
-            isLoading = false
-            registerMessage = result.getOrNull() ?: result.exceptionOrNull()?.message
-        }
-    }
-
-    // Update password
-    fun updatePassword(oldPass: String, newPass: String, confirmPass: String) {
-        viewModelScope.launch {
-            isLoading = true
-            val result = repository.updatePassword(UpdatePasswordRequest(oldPass, newPass, confirmPass))
-            isLoading = false
-            registerMessage = result.getOrNull() ?: result.exceptionOrNull()?.message
-        }
-    }
-
-    // Logout
-    fun logout() {
-        viewModelScope.launch {
-            repository.logout()
-            // Reset all states
-            loginSuccess = false
-            otpSent = false
-            otpVerified = false
-            otpVerifiedForForgot = false
-            passwordResetSuccess = false
-            registerMessage = null
-            errorMessage = null
-        }
-    }
-
-    // Reset states
     fun resetStates() {
         loginSuccess = false
         otpSent = false
@@ -154,5 +56,149 @@ class AuthViewModel @Inject constructor(
         passwordResetSuccess = false
         registerMessage = null
         errorMessage = null
+    }
+
+    fun loadUserProfile() {
+        viewModelScope.launch {
+            isLoading = true
+            val result = repository.getUserProfile()
+            isLoading = false
+
+            result.onSuccess { userData ->
+                _userProfile.value = userData
+            }.onFailure { exception ->
+                errorMessage = exception.message
+            }
+        }
+    }
+
+    fun login(email: String, password: String) {
+        viewModelScope.launch {
+            isLoading = true
+            val result = repository.login(LoginRequest(email, password))
+            isLoading = false
+
+            result.onSuccess {
+                loginSuccess = true
+                errorMessage = null
+                // Load profile after successful login
+                loadUserProfile()
+            }.onFailure { exception ->
+                errorMessage = exception.message
+                loginSuccess = false
+            }
+        }
+    }
+
+    fun register(username: String, email: String, phone: String, password: String) {
+        viewModelScope.launch {
+            isLoading = true
+            val result = repository.register(RegisterRequest(username, email, phone, password))
+            isLoading = false
+
+            result.onSuccess { message ->
+                registerMessage = message
+                otpSent = true
+            }.onFailure { exception ->
+                registerMessage = exception.message
+                otpSent = false
+            }
+        }
+    }
+
+    fun verifyOtp(code: String, purpose: String) {
+        viewModelScope.launch {
+            isLoading = true
+            val result = repository.verifyOtp(OtpRequest(code))
+            isLoading = false
+
+            result.onSuccess { message ->
+                registerMessage = message
+                when (purpose) {
+                    "register" -> otpVerified = true
+                    "forgot_password" -> otpVerifiedForForgot = true
+                }
+            }.onFailure { exception ->
+                registerMessage = exception.message
+            }
+        }
+    }
+
+    fun forgotPassword(email: String) {
+        viewModelScope.launch {
+            isLoading = true
+            val result = repository.forgotPassword(email)
+            isLoading = false
+
+            result.onSuccess { message ->
+                registerMessage = message
+            }.onFailure { exception ->
+                registerMessage = exception.message
+            }
+        }
+    }
+
+    fun resetPassword(email: String, otpCode: String, newPassword: String) {
+        viewModelScope.launch {
+            isLoading = true
+            val result = repository.resetPassword(email, otpCode, newPassword)
+            isLoading = false
+
+            result.onSuccess { message ->
+                registerMessage = message
+                passwordResetSuccess = true
+            }.onFailure { exception ->
+                registerMessage = exception.message
+                passwordResetSuccess = false
+            }
+        }
+    }
+
+    fun updateProfileWithPhoto(
+        name: String?,
+        address: String?,
+        birthDate: String?,
+        phoneNumber: String?,
+        photoUri: Uri?
+    ) {
+        viewModelScope.launch {
+            isLoading = true
+            val result = repository.updateProfileWithPhoto(name, address, birthDate, phoneNumber, photoUri)
+            isLoading = false
+
+            result.onSuccess { message ->
+                registerMessage = message
+                // Reload profile after update
+                loadUserProfile()
+            }.onFailure { exception ->
+                registerMessage = exception.message
+            }
+        }
+    }
+
+    fun updateProfile(name: String, address: String, birthDate: String, phoneNumber: String?) {
+        updateProfileWithPhoto(name, address, birthDate, phoneNumber, null)
+    }
+
+    fun updatePassword(oldPassword: String, newPassword: String, confirmPassword: String) {
+        viewModelScope.launch {
+            isLoading = true
+            val result = repository.updatePassword(UpdatePasswordRequest(oldPassword, newPassword, confirmPassword))
+            isLoading = false
+
+            result.onSuccess { message ->
+                registerMessage = message
+            }.onFailure { exception ->
+                registerMessage = exception.message
+            }
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            repository.logout()
+            resetStates()
+            _userProfile.value = null
+        }
     }
 }

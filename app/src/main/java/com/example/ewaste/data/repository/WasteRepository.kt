@@ -16,10 +16,14 @@ class WasteRepository @Inject constructor(
     suspend fun fetchKategori(): List<KategoriEntity> {
         return try {
             val response = api.getKategori()
-            if (response.isSuccessful) {
-                val apiData = response.body()?.map {
-                    KategoriEntity(it.id, it.nama)
-                } ?: emptyList()
+            if (response.isSuccessful && response.body() != null) {
+                val apiData = response.body()!!.map { kategoriResponse ->
+                    KategoriEntity(
+                        id = kategoriResponse.id,
+                        namaKategori = kategoriResponse.nama,
+                        deskripsi = kategoriResponse.deskripsi
+                    )
+                }
 
                 // Save to local database
                 kategoriDao.deleteAll()
@@ -39,10 +43,14 @@ class WasteRepository @Inject constructor(
     suspend fun fetchJenis(kategoriId: Int): List<JenisEntity> {
         return try {
             val response = api.getJenisByCategory(kategoriId)
-            if (response.isSuccessful) {
-                val apiData = response.body()?.map {
-                    JenisEntity(it.id, it.namaJenis, it.kategoriId)
-                } ?: emptyList()
+            if (response.isSuccessful && response.body() != null) {
+                val apiData = response.body()!!.map { jenisResponse ->
+                    JenisEntity(
+                        id = jenisResponse.id,
+                        namaJenis = jenisResponse.namaJenis,
+                        kategoriId = jenisResponse.kategoriId
+                    )
+                }
 
                 // Save to local database (replace existing for this category)
                 jenisDao.insertAll(apiData)
@@ -61,10 +69,14 @@ class WasteRepository @Inject constructor(
     suspend fun fetchAllJenis(): List<JenisEntity> {
         return try {
             val response = api.getJenis()
-            if (response.isSuccessful) {
-                val apiData = response.body()?.map {
-                    JenisEntity(it.id, it.namaJenis, it.kategoriId)
-                } ?: emptyList()
+            if (response.isSuccessful && response.body() != null) {
+                val apiData = response.body()!!.map { jenisResponse ->
+                    JenisEntity(
+                        id = jenisResponse.id,
+                        namaJenis = jenisResponse.namaJenis,
+                        kategoriId = jenisResponse.kategoriId
+                    )
+                }
 
                 // Save to local database
                 jenisDao.deleteAll()

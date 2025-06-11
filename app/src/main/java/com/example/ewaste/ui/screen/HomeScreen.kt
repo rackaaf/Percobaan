@@ -1,6 +1,8 @@
 package com.example.ewaste.ui.screen
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
@@ -13,118 +15,190 @@ import com.example.ewaste.ui.theme.PrimaryGreen
 import com.example.ewaste.ui.theme.SecondaryGreen
 import com.example.ewaste.viewmodel.AuthViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.collectAsState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
-    val userName = authViewModel.repository.getUserName() ?: "User"
+    val userProfile by authViewModel.userProfile.collectAsState()
+    val scrollState = rememberScrollState()
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    // Load user profile when screen opens
+    LaunchedEffect(Unit) {
+        authViewModel.loadUserProfile()
+    }
 
-        // Header dengan nama user dari API
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+    val userName = userProfile?.name ?: authViewModel.repository.getUserName() ?: "User"
+    val userAddress = userProfile?.address ?: authViewModel.repository.getUserAddress() ?: "Alamat belum diatur"
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding() // Fix untuk tidak mepet ke atas
+            .verticalScroll(scrollState)
+    ) {
+        // Header Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(containerColor = PrimaryGreen),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
-            Column {
-                Text(
-                    text = "Selamat Datang,",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.Gray
-                )
-                Text(
-                    text = userName,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = PrimaryGreen
-                )
-            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Selamat Datang,",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = userName,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = userAddress,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.7f),
+                        maxLines = 2
+                    )
+                }
 
-            IconButton(onClick = { navController.navigate("profile") }) {
-                Icon(
-                    imageVector = Icons.Filled.Person,
-                    contentDescription = "Profile",
-                    tint = PrimaryGreen
-                )
+                IconButton(
+                    onClick = { navController.navigate("profile") },
+                    modifier = Modifier
+                        .size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Person,
+                        contentDescription = "Profile",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Kecamatan Jagakarsa",
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color.Gray
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Card aksi utama
+        // Main Action Card
         Card(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            colors = CardDefaults.cardColors(containerColor = PrimaryGreen)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = SecondaryGreen),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
             ) {
                 Text(
-                    "Tukarkan sampah elektronikmu sekarang",
-                    style = MaterialTheme.typography.bodyMedium,
+                    "Tukarkan Sampah Elektronikmu",
+                    style = MaterialTheme.typography.titleMedium,
                     color = Color.White
                 )
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Dapatkan poin dan kontribusi untuk lingkungan",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.8f)
+                    "Dapatkan poin dan kontribusi untuk lingkungan yang lebih bersih",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.9f)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // Menu Buttons Section
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                "Menu Utama",
+                style = MaterialTheme.typography.titleMedium,
+                color = PrimaryGreen,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
 
-        // Menu navigation
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Button(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            // Kategori Sampah Button
+            ElevatedButton(
                 onClick = { navController.navigate("kategori") },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryGreen,
-                    contentColor = Color.White
-                )
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.elevatedButtonColors(
+                    containerColor = Color.White,
+                    contentColor = PrimaryGreen
+                ),
+                elevation = ButtonDefaults.elevatedButtonElevation(defaultElevation = 4.dp)
             ) {
-                Text("Kategori Sampah")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        "📋 Kategori Sampah",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                }
             }
 
-            Button(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Jenis Sampah Button
+            ElevatedButton(
                 onClick = { navController.navigate("jenis") },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryGreen,
-                    contentColor = Color.White
-                )
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.elevatedButtonColors(
+                    containerColor = Color.White,
+                    contentColor = PrimaryGreen
+                ),
+                elevation = ButtonDefaults.elevatedButtonElevation(defaultElevation = 4.dp)
             ) {
-                Text("Jenis Sampah")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        "🗂️ Jenis Sampah",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Logout button
+        // Logout Button
         Button(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
             onClick = {
                 authViewModel.logout()
                 navController.navigate("splash") {
                     popUpTo("home") { inclusive = true }
                 }
             },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .height(48.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = SecondaryGreen,
+                containerColor = MaterialTheme.colorScheme.error,
                 contentColor = Color.White
             )
         ) {
-            Text("Log Out")
+            Text("Keluar", style = MaterialTheme.typography.titleSmall)
         }
     }
 }

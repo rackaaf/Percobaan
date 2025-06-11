@@ -1,14 +1,14 @@
 package com.example.ewaste.ui.screen
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.ewaste.ui.theme.PrimaryGreen
 import com.example.ewaste.viewmodel.AuthViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
@@ -28,39 +28,59 @@ fun SplashScreen(
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        Text(
-            "E-Waste Management",
-            style = MaterialTheme.typography.headlineLarge,
-            color = PrimaryGreen
-        )
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        Button(
-            onClick = { navController.navigate("login") },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = PrimaryGreen,
-                contentColor = Color.White
-            ),
-            modifier = Modifier.fillMaxWidth().padding(8.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Login")
-        }
+            Text(
+                "🌿 E-Waste Management",
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                color = MaterialTheme.colorScheme.primary
+            )
 
-        Button(
-            onClick = { navController.navigate("register") },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = PrimaryGreen,
-                contentColor = Color.White
-            ),
-            modifier = Modifier.fillMaxWidth().padding(8.dp)
-        ) {
-            Text("Register")
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Bersama kita lindungi lingkungan ♻️",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            Button(
+                onClick = { navController.navigate("login") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("🔐 Login")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = { navController.navigate("register") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("📝 Register")
+            }
         }
     }
 }

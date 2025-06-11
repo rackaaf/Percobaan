@@ -18,7 +18,7 @@ import javax.inject.Singleton
 object NetworkModule {
 
     // Ganti BASE_URL dengan IP khusus untuk emulator
-    private const val BASE_URL = "http://192.168.100.159/ewaste-api/public/api/"
+    private const val BASE_URL = "http://192.168.0.205/Rest-API/public/api/"
 
     @Provides
     @Singleton

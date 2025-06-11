@@ -34,11 +34,6 @@ fun OtpScreen(
                         popUpTo("register") { inclusive = true }
                     }
                 }
-                "forgot" -> {
-                    navController.navigate("reset") {
-                        popUpTo("otp/forgot") { inclusive = true }
-                    }
-                }
             }
         }
     }

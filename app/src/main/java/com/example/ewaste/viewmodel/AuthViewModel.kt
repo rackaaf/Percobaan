@@ -99,10 +99,10 @@ class AuthViewModel @Inject constructor(
     }
 
     // Reset password (updated to include email and OTP)
-    fun resetPassword(otpCode: String, newPassword: String) {
+    fun resetPassword(email: String, otpCode: String, newPassword: String) {
         viewModelScope.launch {
             isLoading = true
-            val result = repository.resetPassword(forgotPasswordEmail, otpCode, newPassword)
+            val result = repository.resetPassword(email, otpCode, newPassword)
             isLoading = false
 
             passwordResetSuccess = result.isSuccess

@@ -26,7 +26,7 @@ fun ForgotPasswordScreen(
         if (viewModel.registerMessage?.contains("sent") == true && !redirecting) {
             redirecting = true
             delay(2000)
-            navController.navigate("otp/forgot")
+            navController.navigate("reset")
         }
     }
 

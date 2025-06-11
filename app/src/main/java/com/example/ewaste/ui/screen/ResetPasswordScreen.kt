@@ -23,6 +23,7 @@ fun ResetPasswordScreen(
     navController: NavController,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
+    var email by remember { mutableStateOf("") }
     var otpCode by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -57,6 +58,15 @@ fun ResetPasswordScreen(
         )
 
         Spacer(modifier = Modifier.height(32.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Input OTP Code
         OutlinedTextField(
@@ -118,12 +128,12 @@ fun ResetPasswordScreen(
                     passwordMismatch = true
                 } else {
                     passwordMismatch = false
-                    viewModel.resetPassword(otpCode, newPassword)
+                    viewModel.resetPassword(email ,otpCode, newPassword)
                 }
             },
             modifier = Modifier.fillMaxWidth(),
             enabled = !viewModel.isLoading
-        ) {
+        ){
             if (viewModel.isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
             } else {

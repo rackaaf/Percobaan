@@ -3,7 +3,6 @@ package com.example.ewaste.ui.screen
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -19,7 +18,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -81,6 +79,11 @@ fun ProfileScreen(
         }
     }
 
+    
+
+    // Current photo URL dari profile state atau fallback ke SharedPreferences
+    val currentPhotoUrl = userProfile?.photo_url ?: viewModel.repository.getUserPhotoUrl()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -122,9 +125,9 @@ fun ProfileScreen(
             ) {
                 Box {
                     // Profile Picture
-                    val imageToShow = selectedImageUri ?: userProfile?.photo_url
+                    val imageToShow = selectedImageUri ?: currentPhotoUrl
 
-                    if (imageToShow != null) {
+                    if (imageToShow != null && imageToShow.toString().isNotEmpty()) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(imageToShow)
